@@ -1,0 +1,32 @@
+version: "3.9"
+
+networks:
+  student-microservice-dev:
+    driver: bridge
+services:
+  app:
+    container_name: student-microservice
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    networks:
+      - student-microservice-dev
+    depends_on:
+      - postgres_db
+  postgres_db:
+    container_name: postgres
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: students
+    ports:
+      - "5432:5432"
+    networks:
+      - student-microservice-dev
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+volumes:
+    postgres-data:
