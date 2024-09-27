@@ -1,5 +1,6 @@
 ﻿using MicroService.Data;
 using MicroService.Models;
+using MicroService.Models.DTO;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,7 +21,7 @@ namespace MicroService.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Student>>> GetStudents()
         {
-            return await _context.Students.ToListAsync();
+            return await _context.Students.OrderByDescending(i => i.Id).ToListAsync();
         }
 
         // GET: api/Students/5
@@ -35,6 +36,24 @@ namespace MicroService.Controllers
             }
 
             return student;
+        }
+
+        // GET: api/Students/report
+        [HttpGet("/report")]
+        public async Task<ActionResult<IEnumerable<ReportDTO>>> GetReportStudents()
+        {
+            var report =
+                await _context.Students
+                    .GroupBy(i => i.Speciality)
+                    .Select(i => new ReportDTO
+                    {
+                        Speciality = i.Key,
+                        Expelled = i.Count(i => i.IsExpelled),
+                        Listed = i.Count(i => !i.IsExpelled)
+                    })
+                    .ToListAsync();
+
+            return report;
         }
 
         // PUT: api/Students/5
@@ -93,6 +112,70 @@ namespace MicroService.Controllers
             await _context.SaveChangesAsync();
 
             return NoContent();
+        }
+
+        // POST: api/Students/5/expel
+        [HttpPost("{id}/expel")]
+        public async Task<IActionResult> ExpelStudent(int id)
+        {
+            var student = await _context.Students.FirstOrDefaultAsync(i => i.Id == id && !i.IsExpelled);
+
+            if (student == null)
+            {
+                return BadRequest();
+            }
+
+            student.IsExpelled = true;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!StudentExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return Ok();
+        }
+
+        // POST: api/Students/5/transfer
+        [HttpPost("{id}/transfer")]
+        public async Task<IActionResult> TransferStudent(int id, TransferStudentDTO transferStudentDTO)
+        {
+            var student = await _context.Students.FirstOrDefaultAsync(i => i.Id == id && !i.IsExpelled);
+
+            if (student == null || string.IsNullOrEmpty(transferStudentDTO.Speciality))
+            {
+                return BadRequest();
+            }
+
+            student.Speciality = transferStudentDTO.Speciality;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!StudentExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return Ok();
         }
 
         private bool StudentExists(int id)
