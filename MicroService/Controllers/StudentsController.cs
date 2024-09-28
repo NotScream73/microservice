@@ -12,10 +12,7 @@ namespace MicroService.Controllers
     {
         private readonly ApplicationDbContext _context;
 
-        public StudentsController(ApplicationDbContext context)
-        {
-            _context = context;
-        }
+        public StudentsController(ApplicationDbContext context) => _context = context;
 
         // GET: api/Students
         [HttpGet]
