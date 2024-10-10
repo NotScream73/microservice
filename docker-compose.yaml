@@ -3,18 +3,19 @@ version: "3.9"
 networks:
   student-microservice-dev:
     driver: bridge
+
 services:
   app:
     container_name: student-microservice
     build:
       context: .
-      dockerfile: Dockerfile
-    ports:
-      - "8080:8080"
+      dockerfile: ./Microservice/Dockerfile
     networks:
       - student-microservice-dev
     depends_on:
       - postgres_db
+    ports:
+      - "5001:8080"
   postgres_db:
     container_name: postgres
     image: postgres:latest
@@ -28,5 +29,29 @@ services:
       - student-microservice-dev
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      
+  apigateway:
+    container_name: student-gateway
+    build:
+      context: .
+      dockerfile: ./ApiGateway/Dockerfile
+    ports:
+      - "5000:8080"
+    networks:
+      - student-microservice-dev
+    depends_on:
+      - app
+      - reportservice
+  reportservice:
+    container_name: student-reportservice
+    build:
+      context: .
+      dockerfile: ./ReportService/Dockerfile
+    networks:
+      - student-microservice-dev
+    depends_on:
+      - postgres_db
+    ports:
+      - "5002:8080"
 volumes:
-    postgres-data:
+  postgres-data:

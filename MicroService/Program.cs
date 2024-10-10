@@ -1,4 +1,5 @@
-using MicroService.Data;
+using Domain.Data;
+using MicroService.Models;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,7 +23,7 @@ await app.InitialiseDatabaseAsync();
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 app.UseAuthorization();
 

@@ -1,8 +1,8 @@
-﻿using MicroService.Models;
+﻿using Domain.Data;
+using Domain.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace MicroService.Data;
-
+namespace MicroService.Models;
 public static class InitialiserExtensions
 {
     public static async Task InitialiseDatabaseAsync(this WebApplication app)
