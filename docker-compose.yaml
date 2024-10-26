@@ -51,7 +51,5 @@ services:
       - student-microservice-dev
     depends_on:
       - postgres_db
-    ports:
-      - "5002:8080"
 volumes:
   postgres-data:
