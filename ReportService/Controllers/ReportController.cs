@@ -14,24 +14,22 @@ public class ReportController : ControllerBase
     private readonly ApplicationDbContext _context;
     private static HttpClient httpClient = new HttpClient();
     private readonly ILogger<ReportController> _logger;
+    private readonly ExternalClientService _externalClientService;
 
-    public ReportController(ApplicationDbContext context, ILogger<ReportController> logger)
+    public ReportController(ApplicationDbContext context, ILogger<ReportController> logger, ExternalClientService externalClientService)
     {
         _context = context;
         _logger = logger;
+        _externalClientService = externalClientService;
     }
 
     // GET: api/Report
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ReportDTO>>> GetReportStudents()
     {
-        using HttpResponseMessage response = await httpClient.GetAsync("http://app:8080/api/students/");
+        var response = await _externalClientService.SendRequestAsync(Request, "http://app:8080/api/students/", HttpMethod.Get, null, null);
 
-        response.EnsureSuccessStatusCode();
-
-        var jsonString = await response.Content.ReadAsStringAsync();
-
-        var students = JsonConvert.DeserializeObject<List<Student>>(jsonString);
+        var students = JsonConvert.DeserializeObject<List<Student>>(response);
 
         if (students == null || students.Count == 0)
         {
@@ -60,16 +58,9 @@ public class ReportController : ControllerBase
             { new StreamContent(System.IO.File.OpenRead(filePath)), "file", fileName }
         };
 
-        var csvResponse = await httpClient.PostAsync("http://storageservice:8080/api/storage/upload", content);
+        response = await _externalClientService.SendRequestAsync(Request, "http://storageservice:8080/api/storage/upload", HttpMethod.Post, null, content);
 
-        if (csvResponse.IsSuccessStatusCode)
-        {
-            return report;
-        }
-        else
-        {
-            return BadRequest();
-        }
+        return report;
     }
     private string GenerateCsv<T>(IEnumerable<T> data)
     {

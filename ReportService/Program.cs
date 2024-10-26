@@ -15,7 +15,7 @@ builder.Host.UseSerilog((host, config) =>
 {
     config.ReadFrom.Configuration(host.Configuration);
     config.WriteTo.File(
-            "logs/log-.txt",
+            "logs/report-log-.txt",
             rollingInterval: RollingInterval.Day,
             outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}"
         );
@@ -25,6 +25,8 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddHttpClient<ExternalClientService>();
 
 var app = builder.Build();
 

@@ -16,7 +16,7 @@ builder.Host.UseSerilog((host, config) =>
 {
     config.ReadFrom.Configuration(host.Configuration);
     config.WriteTo.File(
-            "logs/log-.txt",
+            "logs/main-log-.txt",
             rollingInterval: RollingInterval.Day,
             outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}"
         );
