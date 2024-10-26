@@ -3,6 +3,8 @@ version: "3.9"
 networks:
   student-microservice-dev:
     driver: bridge
+  minio-network:
+    driver: bridge
 
 services:
   app:
@@ -16,6 +18,8 @@ services:
       - postgres_db
     ports:
       - "5001:8080"
+    volumes:
+      - ./logs:/app/logs
   postgres_db:
     container_name: postgres
     image: postgres:latest
@@ -29,6 +33,7 @@ services:
       - student-microservice-dev
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./logs:/app/logs
       
   apigateway:
     container_name: student-gateway
@@ -42,6 +47,8 @@ services:
     depends_on:
       - app
       - reportservice
+    volumes:
+      - ./logs:/app/logs
   reportservice:
     container_name: student-reportservice
     build:
@@ -51,5 +58,37 @@ services:
       - student-microservice-dev
     depends_on:
       - postgres_db
+      - minio
+    volumes:
+      - ./logs:/app/logs
+  storageservice:
+    build:
+      context: .
+      dockerfile: ./StorageService/Dockerfile
+    networks:
+      - student-microservice-dev
+      - minio-network
+    ports:
+      - "5465:80"
+    depends_on:
+      - minio
+    volumes:
+      - ./logs:/app/logs
+  minio:
+    container_name: minio
+    image: minio/minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+      - ./logs:/app/logs
+    networks:
+      - minio-network
 volumes:
   postgres-data:
+  minio-data:
