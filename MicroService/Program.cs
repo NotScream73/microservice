@@ -1,6 +1,8 @@
 using Domain.Data;
+using MicroService;
 using MicroService.Models;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +11,17 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Add services to the container.
+
+builder.Host.UseSerilog((host, config) =>
+{
+    config.ReadFrom.Configuration(host.Configuration);
+    config.WriteTo.File(
+            "logs/main-log-.txt",
+            rollingInterval: RollingInterval.Day,
+            outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}"
+        );
+});
+
 builder.Services.AddScoped<ApplicationDbContextInitialiser>();
 
 builder.Services.AddControllers();
@@ -24,6 +37,7 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 //app.UseHttpsRedirection();
+app.UseMiddleware<TraceLoggingMiddleware>();
 
 app.UseAuthorization();
 

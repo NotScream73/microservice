@@ -1,22 +1,26 @@
-using Domain.Data;
+using Amazon.Runtime;
+using Amazon.S3;
 using MassTransit;
-using Microsoft.EntityFrameworkCore;
-using ReportService;
 using Serilog;
+using StorageService;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Подключение к PostgreSQL
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-
 // Add services to the container.
+builder.Services.AddSingleton<IAmazonS3>(sp => new AmazonS3Client(
+    new BasicAWSCredentials("minioadmin", "minioadmin"),
+    new AmazonS3Config
+    {
+        ServiceURL = "http://minio:9000",  // URL MinIO
+        ForcePathStyle = true              // Используем путь вместо DNS
+    }
+));
 
 builder.Host.UseSerilog((host, config) =>
 {
     config.ReadFrom.Configuration(host.Configuration);
     config.WriteTo.File(
-            "logs/report-log-.txt",
+            "logs/storage-log-.txt",
             rollingInterval: RollingInterval.Day,
             outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}"
         );
@@ -24,6 +28,8 @@ builder.Host.UseSerilog((host, config) =>
 
 builder.Services.AddMassTransit(x =>
 {
+    x.AddConsumer<OrderSubmittedConsumer>();
+
     x.UsingRabbitMq((context, cfg) =>
     {
         cfg.Host("rabbitmq", "/", h =>
@@ -31,16 +37,18 @@ builder.Services.AddMassTransit(x =>
             h.Username("guest");
             h.Password("guest");
         });
+
+        cfg.ReceiveEndpoint("my_queue", e =>
+        {
+            e.ConfigureConsumer<OrderSubmittedConsumer>(context);
+        });
     });
 });
-
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
-builder.Services.AddHttpClient<ExternalClientService>();
 
 var app = builder.Build();
 
