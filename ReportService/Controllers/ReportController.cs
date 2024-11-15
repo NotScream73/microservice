@@ -1,5 +1,6 @@
 ﻿using Domain.Data;
 using Domain.Models;
+using MassTransit;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using ReportService.Models.DTO;
@@ -15,12 +16,14 @@ public class ReportController : ControllerBase
     private static HttpClient httpClient = new HttpClient();
     private readonly ILogger<ReportController> _logger;
     private readonly ExternalClientService _externalClientService;
+    private readonly IBus _bus;
 
-    public ReportController(ApplicationDbContext context, ILogger<ReportController> logger, ExternalClientService externalClientService)
+    public ReportController(ApplicationDbContext context, ILogger<ReportController> logger, ExternalClientService externalClientService, IBus bus)
     {
         _context = context;
         _logger = logger;
         _externalClientService = externalClientService;
+        _bus = bus;
     }
 
     // GET: api/Report
@@ -58,7 +61,13 @@ public class ReportController : ControllerBase
             { new StreamContent(System.IO.File.OpenRead(filePath)), "file", fileName }
         };
 
-        response = await _externalClientService.SendRequestAsync(Request, "http://storageservice:8080/api/storage/upload", HttpMethod.Post, null, content);
+        await _bus.Publish(new MessageDTO
+        {
+            File = csvContent,
+            FileName = HttpContext.Request.Headers["X-Trace-Id"].ToString()
+        });
+
+        //response = await _externalClientService.SendRequestAsync(Request, "http://storageservice:8080/api/storage/upload", HttpMethod.Post, null, content);
 
         return report;
     }
@@ -77,5 +86,9 @@ public class ReportController : ControllerBase
 
         return csvBuilder.ToString();
     }
+}
 
+public interface IOrderSubmitted
+{
+    string File { get; }
 }

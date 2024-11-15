@@ -59,6 +59,7 @@ services:
     depends_on:
       - postgres_db
       - minio
+      - rabbitmq
     volumes:
       - ./logs:/app/logs
   storageservice:
@@ -72,6 +73,7 @@ services:
       - "5465:80"
     depends_on:
       - minio
+      - rabbitmq
     volumes:
       - ./logs:/app/logs
   minio:
@@ -89,6 +91,18 @@ services:
       - ./logs:/app/logs
     networks:
       - minio-network
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
+    hostname: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - student-microservice-dev
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
 volumes:
   postgres-data:
   minio-data:

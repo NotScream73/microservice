@@ -1,4 +1,5 @@
 using Domain.Data;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using ReportService;
 using Serilog;
@@ -20,6 +21,19 @@ builder.Host.UseSerilog((host, config) =>
             outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}"
         );
 });
+
+builder.Services.AddMassTransit(x =>
+{
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host("rabbitmq", "/", h =>
+        {
+            h.Username("guest");
+            h.Password("guest");
+        });
+    });
+});
+
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

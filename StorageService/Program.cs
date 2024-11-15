@@ -1,5 +1,6 @@
 using Amazon.Runtime;
 using Amazon.S3;
+using MassTransit;
 using Serilog;
 using StorageService;
 
@@ -23,6 +24,25 @@ builder.Host.UseSerilog((host, config) =>
             rollingInterval: RollingInterval.Day,
             outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}"
         );
+});
+
+builder.Services.AddMassTransit(x =>
+{
+    x.AddConsumer<OrderSubmittedConsumer>();
+
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host("rabbitmq", "/", h =>
+        {
+            h.Username("guest");
+            h.Password("guest");
+        });
+
+        cfg.ReceiveEndpoint("my_queue", e =>
+        {
+            e.ConfigureConsumer<OrderSubmittedConsumer>(context);
+        });
+    });
 });
 
 builder.Services.AddControllers();
