@@ -2,7 +2,10 @@
 using Domain.Models;
 using MassTransit;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
+using Microsoft.Extensions.Options;
+using ReportService.Attributes;
+using ReportService.Configurations;
+using ReportService.Exceptions;
 using ReportService.Models.DTO;
 using System.Text;
 
@@ -16,23 +19,33 @@ public class ReportController : ControllerBase
     private static HttpClient httpClient = new HttpClient();
     private readonly ILogger<ReportController> _logger;
     private readonly ExternalClientService _externalClientService;
+    private readonly ExternalServiceBaseUrlConfig _externalServicesConfig;
     private readonly IBus _bus;
 
-    public ReportController(ApplicationDbContext context, ILogger<ReportController> logger, ExternalClientService externalClientService, IBus bus)
+    public ReportController(ApplicationDbContext context, ILogger<ReportController> logger, IOptions<ExternalServiceBaseUrlConfig> config, ExternalClientService externalClientService, IBus bus)
     {
         _context = context;
         _logger = logger;
         _externalClientService = externalClientService;
+        _externalServicesConfig = config.Value;
         _bus = bus;
     }
 
     // GET: api/Report
     [HttpGet]
+    [ApiAuthorize("Admin")]
     public async Task<ActionResult<IEnumerable<ReportDTO>>> GetReportStudents()
     {
-        var response = await _externalClientService.SendRequestAsync(Request, "http://app:8080/api/students/", HttpMethod.Get, null, null);
+        var accessTokenHeader = HttpContext.Request.Headers["Authorization"].ToString();
+        var accessToken = accessTokenHeader.Replace("Bearer ", "");
 
-        var students = JsonConvert.DeserializeObject<List<Student>>(response);
+        var meInfoUrl = $"{_externalServicesConfig.AccountService}/api/Accounts/Me";
+
+        var meInfo = await _externalClientService
+            .SendRequestAsync<AccountMeInfoResponse>(accessToken, meInfoUrl, HttpMethod.Get, null)
+            ?? throw new ApiException("Действие запрещено.");
+
+        var students = await _externalClientService.SendRequestAsync<List<Student>>(accessToken, "http://app:8080/api/students/", HttpMethod.Get, null);
 
         if (students == null || students.Count == 0)
         {

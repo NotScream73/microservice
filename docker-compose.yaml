@@ -1,5 +1,3 @@
-version: "3.9"
-
 networks:
   student-microservice-dev:
     driver: bridge
@@ -7,6 +5,30 @@ networks:
     driver: bridge
 
 services:
+  account-service:
+    container_name: account-service
+    build:
+      context: .
+      dockerfile: ./Account/Dockerfile
+    networks:
+      - student-microservice-dev
+    depends_on:
+      - postgres-account-db
+    environment:
+      ASPNETCORE_HTTP_PORTS: 80
+  postgres-account-db:
+    container_name: postgres-account-db
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: accounts
+    ports:
+      - "5433:5432"
+    networks:
+      - student-microservice-dev
+    volumes:
+      - postgres-account-data:/var/lib/postgresql/data
   app:
     container_name: student-microservice
     build:
@@ -104,5 +126,6 @@ services:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
 volumes:
+  postgres-account-data:
   postgres-data:
   minio-data:

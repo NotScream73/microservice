@@ -4,7 +4,7 @@ using ReportService.Models.DTO;
 using System.Net.Http.Headers;
 using System.Text;
 
-namespace ReportService
+namespace ReportService.Services
 {
     public class ExternalClientService
     {

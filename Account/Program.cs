@@ -1,72 +1,56 @@
-using Domain.Data;
-using MassTransit;
+using Account.Data;
+using Account.Filters;
+using Account.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using ReportService;
-using ReportService.Configurations;
-using ReportService.Filters;
-using Serilog;
+using System.Reflection;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Подключение к PostgreSQL
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+builder.Services.AddDbContext<DataContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Add services to the container.
+builder.Services.AddScoped<DataContextInitializer>();
+builder.Services.AddAutoMapper(Assembly.GetExecutingAssembly());
 
-builder.Host.UseSerilog((host, config) =>
-{
-    config.ReadFrom.Configuration(host.Configuration);
-    config.WriteTo.File(
-            "logs/report-log-.txt",
-            rollingInterval: RollingInterval.Day,
-            outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}"
-        );
-});
-
-builder.Services.AddMassTransit(x =>
-{
-    x.UsingRabbitMq((context, cfg) =>
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(x =>
     {
-        cfg.Host("rabbitmq", "/", h =>
+        x.TokenValidationParameters = new TokenValidationParameters
         {
-            h.Username("guest");
-            h.Password("guest");
-        });
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])),
+            ValidateAudience = false,
+            ValidateIssuer = false,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true
+        };
     });
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("Admin", policy => policy.RequireRole("Admin"));
 });
 
+// Add services to the container.
 
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add(new GlobalExceptionFilter());
 });
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.Configure<ExternalServiceBaseUrlConfig>(builder.Configuration.GetSection("ExternalServiceBaseUrl"));
 
-builder.Services.AddAuthentication().AddJwtBearer(JwtBearerDefaults.AuthenticationScheme,
-   options =>
-   {
-       options.RequireHttpsMetadata = false;
-       options.MapInboundClaims = false;
-       options.TokenValidationParameters =
-          new TokenValidationParameters
-          {
-              ValidateAudience = false,
-              ValidateLifetime = false,
-              ValidateIssuer = false
-          };
-       options.TokenValidationParameters.SignatureValidator = (token, _) => new JsonWebToken(token);
-   });
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "TimeTableService API", Version = "v1" });
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "AccountService API", Version = "v1" });
 
     var securityScheme = new OpenApiSecurityScheme
     {
@@ -103,16 +87,16 @@ builder.Services.AddSwaggerGen(c =>
     c.AddSecurityRequirement(securityRequirement);
 
 });
-builder.Services.AddHttpClient<ExternalClientService>();
 
 var app = builder.Build();
+
+await app.InitializeDatabaseAsync();
 
 // Configure the HTTP request pipeline.
 app.UseSwagger();
 app.UseSwaggerUI();
-//app.UseHttpsRedirection();
-app.UseMiddleware<TraceLoggingMiddleware>();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
