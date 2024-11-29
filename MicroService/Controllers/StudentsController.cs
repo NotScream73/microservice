@@ -10,9 +10,13 @@ namespace MicroService.Controllers;
 [ApiController]
 public class StudentsController : ControllerBase
 {
-    private readonly ApplicationDbContext _context;
+    private readonly ApplicationDbContext _context; private readonly IHttpClientFactory _httpClientFactory;
 
-    public StudentsController(ApplicationDbContext context) => _context = context;
+    public StudentsController(ApplicationDbContext context, IHttpClientFactory httpClientFactory)
+    {
+        _context = context;
+        _httpClientFactory = httpClientFactory;
+    }
 
     // GET: api/Students
     [HttpGet]
@@ -33,6 +37,29 @@ public class StudentsController : ControllerBase
         }
 
         return student;
+    }
+
+    [HttpGet("file/{fileName}")]
+    public async Task<FileResult> GetFile(string fileName)
+    {
+        var reportTask = GetReportFromFileStorageAsync(fileName);
+
+        var file = await reportTask;
+
+        return file;
+    }
+
+    private async Task<FileResult> GetReportFromFileStorageAsync(string fileName)
+    {
+        var httpClient = _httpClientFactory.CreateClient();
+
+        var response = await httpClient.GetAsync($"http://storageservice:8080/api/Storage/{fileName}");
+        response.EnsureSuccessStatusCode();
+
+        await using var ms = new MemoryStream();
+        await response.Content.CopyToAsync(ms);
+
+        return File(ms.ToArray(), "text/csv", fileName);
     }
 
     // PUT: api/Students/5

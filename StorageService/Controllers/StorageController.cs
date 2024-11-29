@@ -37,4 +37,27 @@ public class StorageController : ControllerBase
         return Ok("File uploaded successfully to MinIO.");
     }
 
+
+    [HttpGet("{fileName}")]
+    public async Task<IActionResult> GetFile(string fileName)
+    {
+        try
+        {
+            var response = await _s3Client.GetObjectAsync(BucketName, fileName);
+
+            await using var ms = new MemoryStream();
+            await response.ResponseStream.CopyToAsync(ms);
+            ms.Position = 0;
+
+            return File(ms.ToArray(), "text/csv");
+        }
+        catch (AmazonS3Exception s3Ex)
+        {
+            return NotFound(new { message = $"S3 Error: {s3Ex.Message}" });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = $"Internal Error: {ex.Message}" });
+        }
+    }
 }

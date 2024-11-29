@@ -24,6 +24,7 @@ builder.Host.UseSerilog((host, config) =>
 
 builder.Services.AddScoped<ApplicationDbContextInitialiser>();
 
+builder.Services.AddHttpClient();
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
