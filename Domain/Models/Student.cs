@@ -8,4 +8,5 @@ public class Student
     public string MiddleName { get; set; } = string.Empty;
     public string Speciality { get; set; } = string.Empty;
     public bool IsExpelled { get; set; }
+    public int Sort { get; set; }
 }

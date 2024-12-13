@@ -28,7 +28,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: students
     ports:
-      - "5432:5432"
+      - "5433:5432"
     networks:
       - student-microservice-dev
     volumes:

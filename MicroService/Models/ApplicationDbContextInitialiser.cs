@@ -46,10 +46,23 @@ public class ApplicationDbContextInitialiser
                 LastName = "Сергеев",
                 MiddleName = "Игоревич",
                 Speciality = "Программный инженер",
-                IsExpelled = false
+                IsExpelled = false,
+                Sort = 0
             });
 
             await _context.SaveChangesAsync();
         }
+
+        _context.Students.AddRange(Enumerable.Range(1, 10000).Select(i => new Student
+        {
+            FirstName = "Имя",
+            LastName = "Фамилия",
+            MiddleName = "Отчество",
+            Speciality = "Какая-то специальнсоть",
+            IsExpelled = false,
+            Sort = new Random().Next(1, 1000)
+        }));
+
+        await _context.SaveChangesAsync();
     }
 }

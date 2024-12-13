@@ -1,4 +1,5 @@
-﻿using Domain.Data;
+﻿using Domain;
+using Domain.Data;
 using Domain.Models;
 using MicroService.Models.DTO;
 using Microsoft.AspNetCore.Mvc;
@@ -33,6 +34,30 @@ public class StudentsController : ControllerBase
         }
 
         return student;
+    }
+
+    // GET: api/Students/sort
+    [HttpGet("sort")]
+    public async Task<IActionResult> SortStudents([FromQuery] int threadCount)
+    {
+        try
+        {
+            var data = await _context.Students.Select(u => u.Sort).ToArrayAsync();
+
+            var sorter = new ParallelMergeSort();
+            (int[] sortedData, long timeTaken) = sorter.Sort(data, threadCount);
+
+            return Ok(new
+            {
+                Data = sortedData,
+                Time = timeTaken
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Ошибка: {ex.Message}");
+        }
+
     }
 
     // PUT: api/Students/5
